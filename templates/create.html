@@ -25,15 +25,16 @@
         </div>
         <div class="mb-3">
             <label for="content" class="form-label">Content</label>
-            <textarea class="form-control" id="content" rows="3"></textarea>
+            <textarea class="form-control" id="content" name="content" rows="3"></textarea>
         </div>
         <label for="a_amnt" class="form-label">Amount Of Answers</label>
         <input type="range" class="form-range mb-3" name="amount" min="2" max="10" step="1" value=3 id="a_amnt">
+        <p class="text-muted"><em>*mark the correct answer</em></p>
         <div id="answers" class="mb-3">
             {% for i in range(3) %}
                 <div class="form-check m-2">
                     <input class="form-check-input" type="radio" name="correct" value="{{i}}" {% if i == 0 %} required {% endif %}>
-                    <input class="form-control" type="text" name="answer{{i}}" placeholder="Answer {{i + 1}}" required>
+                    <input class="form-control" type="text" name="answer{{i}}" placeholder="Answer {{i + 1}}" required autocomplete="off">
                 </div>
             {% endfor %}
         </div>
@@ -96,6 +97,7 @@
                 a.appendChild(radio)
 
                 let answer = document.createElement("input")
+                answer.setAttribute("autocomplete", "off")
                 answer.setAttribute("name", `answer${i}`)
                 answer.setAttribute("class", "form-control")
                 answer.setAttribute("type", "text")

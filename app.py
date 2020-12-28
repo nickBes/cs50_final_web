@@ -46,14 +46,48 @@ def index():
 
 @app.route("/create", methods=["GET", "POST"])
 def create():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
     if request.method == "GET":
         return render_template("create.html")
-    title = request.form("title")
-    content = request.form("content")
+
+    title = request.form.get("title")
+    content = request.form.get("content")
     if not title or not content:
         return render_template("create.html", message="Non of the inputs should be empty")
-    
-
+    if len(title) > 50:
+        return render_template("create.html", message="The maximum title length should be 50 characters")
+    amount = request.form.get("amount")
+    if not isint(amount):
+        return render_template("create.html", message="The amount of answers should be an integer.")
+    amount = int(amount)
+    if amount > 10 or amount < 2:
+        return render_template("create.html", message="The amount of answers should be between 2 and 10.")
+    answers = []
+    for i in range(amount):
+        try:
+            answers.append(request.form.get(f"answer{i}"))
+            if len(answers[i]) > 250:
+                return render_template("create.html", message="The maximum answer length should be 250 characters.")
+        except:
+            return render_template("create.html", message="An error has occured.")
+    correct = request.form.get("correct")
+    if not correct:
+        return render_template("create.html", message="Non of the inputs should be empty")
+    if not isint(correct):
+        return render_template("create.html", message="An error has occured.")
+    correct = int(correct)
+    riddle = Riddle(title=title, content=content, author_id=session["user_id"])
+    db.session.add(riddle)
+    db.session.commit()
+    for index, answer in enumerate(answers):
+        c = False
+        if index == correct:
+            c = True
+        a = Answer(content=answer, correct=c, riddle_id=riddle.id)
+        db.session.add(a)
+    db.session.commit()
+    return redirect(url_for("index"))
 
 @app.route("/logout")
 def logout():
@@ -111,3 +145,10 @@ def register():
     session.permanent = True
     session["user_id"] = user.id
     return redirect(url_for("index"))
+
+def isint(a):
+    try:
+        int(a)
+        return True
+    except ValueError:
+        return False
