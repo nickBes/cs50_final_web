@@ -1,0 +1,111 @@
+{% extends 'layout.html' %}
+
+{% block style %}
+    <style>
+        #form{
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+{% endblock %}
+
+{% block title %}
+    Riddles: Register
+{% endblock %}
+
+{% block body %}
+<div id="form" class="d-flex justify-content-center w-75">
+    <form id="a_form" class="shadow-sm text-center p-5 bg-light" action="{{ url_for('create') }}" method="POST">
+        <h2 class="mb-5">Create</h2>
+        <div class="form-floating mb-3">
+            <input type="text" name="title" class="form-control" id="floatingInput" placeholder="Title" autocomplete="off" maxlength="50" required>
+            <label for="floatingInput">Title</label>
+        </div>
+        <div class="mb-3">
+            <label for="content" class="form-label">Content</label>
+            <textarea class="form-control" id="content" rows="3"></textarea>
+        </div>
+        <label for="a_amnt" class="form-label">Amount Of Answers</label>
+        <input type="range" class="form-range mb-3" name="amount" min="2" max="10" step="1" value=3 id="a_amnt">
+        <div id="answers" class="mb-3">
+            {% for i in range(3) %}
+                <div class="form-check m-2">
+                    <input class="form-check-input" type="radio" name="correct" value="{{i}}" {% if i == 0 %} required {% endif %}>
+                    <input class="form-control" type="text" name="answer{{i}}" placeholder="Answer {{i + 1}}" required>
+                </div>
+            {% endfor %}
+        </div>
+        <button class="btn btn-primary w-100 btn-lg mt-2" type="submit">Submit</button>
+        {% if message %}
+            <div class="alert alert-danger mt-3" role="alert">
+                {{ message }}
+            </div>      
+        {% endif %}
+    </form>
+</div>
+{% endblock %}
+
+{% block end %}
+    <script>
+        let form = document.getElementById("a_form")
+        let list = ["w-25", "w-50", "w-75", "w-100"]
+        let resize = () => {
+            let width = window.innerWidth
+            form.classList.forEach(item => {
+                if(list.includes(item)){
+                    form.classList.remove(item)
+                }
+            })
+            if (width <= 576){
+                form.classList.add(list[3])
+            }else if (width <= 768){
+                form.classList.add(list[2])
+            }else{
+                form.classList.add(list[1])
+            }
+        }
+        window.onload = resize
+        window.onresize = resize
+
+        let range = document.getElementById("a_amnt")
+        let container = document.getElementById("answers")
+        let create = () => {
+            container.innerHTML = ""
+            let amount = parseInt(range.value)
+            if(Number.isNaN(amount)){
+                location.reload()
+            }
+            if(amount > 10 || amount < 2){
+                location.reload()
+            }
+            for(let i = 0; i < amount; i++)
+            {
+                let a = document.createElement("div")
+                a.setAttribute("class", "form-check m-2")
+
+                let radio = document.createElement("input")
+                radio.setAttribute("name", "correct")
+                radio.setAttribute("class", "form-check-input")
+                radio.setAttribute("type", "radio")
+                radio.setAttribute("value", toString(i))
+                if(i == 0){
+                    radio.setAttribute("required", "")
+                }
+                a.appendChild(radio)
+
+                let answer = document.createElement("input")
+                answer.setAttribute("name", `answer${i}`)
+                answer.setAttribute("class", "form-control")
+                answer.setAttribute("type", "text")
+                answer.setAttribute("placeholder", `Answer ${i+1}`)
+                answer.setAttribute("required", "")
+                a.appendChild(answer)
+
+                container.appendChild(a)
+            }
+        }
+        range.onchange = create
+    </script>
+{% endblock %}
