@@ -1,0 +1,67 @@
+{% extends 'layout.html' %}
+
+{% block style %}
+    <style>
+        #form{
+            position: relative;
+            left: 50%;
+            transform: translate(-50%, 0);
+        }
+    </style>
+{% endblock %}
+
+{% block title %}
+    Riddles: {{riddle.title}}
+{% endblock %}
+
+{% block body %}
+<div id="form" class="d-flex justify-content-center w-75">
+    <form id="a_form" class="shadow-sm text-center p-5 bg-light" action="{{ url_for('question', riddle_id=id) }}" method="POST">
+        <h2 class="mb-3">{{riddle.title}}</h2>
+        <p>{{riddle.content}}</p>
+        {% for answer in riddle.answers %}
+            <div class="form-check d-flex justify-content-center">
+                <input class="form-check-input" type="radio" name="answer" id="answer{{answer.id}}" value="{{answer.id}}" {% if disabled %}disabled{% endif %}>
+                <label class="form-check-label ms-2" for="answer{{answer.id}}">{{answer.content}}</label>
+            </div>
+        {% endfor %}        
+        <button class="btn btn-primary w-100 btn-lg mt-3" type="submit" {% if disabled %}disabled{% endif %}>Submit</button>
+        {% if message %}
+            <div class="alert alert-danger mt-3" role="alert">
+                {{ message }}
+                <a href="{{url_for('index')}}" class="alert-link">Return to main page.</a>
+            </div>      
+        {% endif %}
+        {% if success %}
+            <div class="alert alert-success mt-3" role="alert">
+                {{ success }}
+                <a href="{{url_for('index')}}" class="alert-link">Return to main page.</a>
+            </div>
+        {% endif %}
+    </form>
+</div>
+{% endblock %}
+
+{% block end %}
+    <script>
+        let form = document.getElementById("a_form")
+        let list = ["w-25", "w-50", "w-75", "w-100"]
+        let resize = () => {
+            let width = window.innerWidth
+            form.classList.forEach(item => {
+                if(list.includes(item)){
+                    form.classList.remove(item)
+                }
+            })
+            if (width <= 576){
+                form.classList.add(list[3])
+            }else if (width <= 768){
+                form.classList.add(list[2])
+            }else{
+                form.classList.add(list[1])
+            }
+        }
+        window.onload = resize
+        window.onresize = resize
+    </script>
+{% endblock %}

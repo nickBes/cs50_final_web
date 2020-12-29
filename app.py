@@ -22,7 +22,7 @@ class User(db.Model):
     username = db.Column(db.String(50))
     hash = db.Column(db.Text, nullable=False)
     riddles = db.relationship('Riddle', backref='author')
-    finished_posts = db.relationship('Riddle', secondary=finished, backref='users', lazy='dynamic')
+    finished_posts = db.relationship('Riddle', secondary=finished, backref='users')
 
 
 class Riddle(db.Model):
@@ -42,22 +42,63 @@ class Answer(db.Model):
 
 @app.route("/riddle/<int:riddle_id>", methods=["GET", "POST"])
 def question(riddle_id):
+    riddle = Riddle.query.get(riddle_id)
+    if not riddle:
+        return redirect(url_for("index"))
+    disabled = False
+    if "user_id" in session:
+        if session["user_id"] == riddle.author.id:
+            disabled = True
+        else:
+            user = User.query.get(session["user_id"])
+            for r in user.finished_posts:
+                if r.id == riddle.id:
+                    disabled = True
+                    break
+        
+    if f"r{riddle_id}" in session:
+        disabled = True
+
     if request.method == "GET":
-        return Riddle.query.filter_by(id=riddle_id).first().content
+        return render_template("question.html", id=riddle_id, riddle=riddle, disabled=disabled)
+    if disabled:
+        return render_template("question.html", id=riddle_id, riddle=riddle, message="An error has occured", disabled=disabled)
+    answer = request.form.get("answer")
+    if not answer:
+        return render_template("question.html", id=riddle_id, riddle=riddle, message="An error has occured", disabled=disabled)
+    if not isint(answer):
+        return render_template("question.html", id=riddle_id, riddle=riddle, message="An error has occured", disabled=disabled)
+    answer = int(answer)
+    a = Answer.query.get(answer)
+    if "user_id" not in session:
+        session.permanent = True
+        session[f"r{riddle_id}"] = True
+    else:
+        if not disabled:
+            user.finished_posts.append(riddle)
+            db.session.commit()
+    disabled = True
+    if a.correct:
+        return render_template("question.html", id=riddle_id, riddle=riddle, success="Correct!", disabled=disabled)
+    else:
+        c = Answer.query.filter_by(riddle_id=riddle_id, correct=True).first()
+        return render_template("question.html", id=riddle_id, riddle=riddle, message=f"Incorrect. The answer is: {c.content}", disabled=disabled)
 
 
-@app.route("/", methods=["GET"])
+@app.route("/")
 def index():
-    if request.method == "GET":
-        posts = Riddle.query.order_by(desc(Riddle.date)).paginate(per_page=5)
-        return render_template("index.html", pagination=posts, p=1)
+    posts = Riddle.query.order_by(desc(Riddle.date)).paginate(per_page=5)
+    return render_template("index.html", pagination=posts, p=1)
 
 
 @app.route('/<int:page>')
 def page(page):
     if page < 2:
         return redirect(url_for("index"))
-    posts = Riddle.query.order_by(desc(Riddle.date)).paginate(per_page=5, page=page)
+    try:
+        posts = Riddle.query.order_by(desc(Riddle.date)).paginate(per_page=5, page=page)
+    except:
+        return redirect(url_for("index"))
     return render_template("index.html", pagination=posts, p=page)
 
 
@@ -134,6 +175,7 @@ def login():
     if not user or not check_password_hash(user.hash, password):
         return render_template("login.html", message="Username and/or password are incorrect.")
 
+    session.clear()
     session.permanent = True
     session["user_id"] = user.id
     return redirect(url_for("index"))
@@ -165,6 +207,7 @@ def register():
     user = User(username=name, hash=generate_password_hash(password))
     db.session.add(user)
     db.session.commit()
+    session.clear()
     session.permanent = True
     session["user_id"] = user.id
     return redirect(url_for("index"))
