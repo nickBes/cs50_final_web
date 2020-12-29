@@ -1,6 +1,7 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 from flask import Flask, render_template, url_for, request, redirect, session
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import desc
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -8,6 +9,7 @@ app.secret_key = b"\xf5Ey\xe9I \xb0\xc6\x80k\x83\xfbU!\xf4\xcal'!\t\x99\xc9\xea\
 app.config['PERMANENT_SESSION_LIFETIME'] =  timedelta(days=3)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///riddles.db"
+app.config["SQLALCHEMY_ECHO"] = True
 db = SQLAlchemy(app)
 
 finished = db.Table("finished",
@@ -20,13 +22,14 @@ class User(db.Model):
     username = db.Column(db.String(50))
     hash = db.Column(db.Text, nullable=False)
     riddles = db.relationship('Riddle', backref='author')
-    finished_posts = db.relationship('Riddle', secondary=finished, backref='user')
+    finished_posts = db.relationship('Riddle', secondary=finished, backref='users', lazy='dynamic')
 
 
 class Riddle(db.Model):
     id = db.Column(db.Integer, primary_key=True, nullable=False, autoincrement=True)
     title = db.Column(db.String(250), nullable=False)
     content = db.Column(db.Text, nullable=False)
+    date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     answers = db.relationship('Answer', backref='Riddle')
     author_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
@@ -37,17 +40,36 @@ class Answer(db.Model):
     correct = db.Column(db.Boolean, nullable=False)
     riddle_id = db.Column(db.Integer, db.ForeignKey("riddle.id"), nullable=False)
 
-@app.route("/")
+@app.route("/riddle/<int:riddle_id>", methods=["GET", "POST"])
+def question(riddle_id):
+    if request.method == "GET":
+        return Riddle.query.filter_by(id=riddle_id).first().content
+
+
+@app.route("/", methods=["GET"])
 def index():
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-    return render_template("index.html")
+    if request.method == "GET":
+        posts = Riddle.query.order_by(desc(Riddle.date)).paginate(per_page=5)
+        return render_template("index.html", pagination=posts, p=1)
+
+
+@app.route('/<int:page>')
+def page(page):
+    if page < 2:
+        return redirect(url_for("index"))
+    posts = Riddle.query.order_by(desc(Riddle.date)).paginate(per_page=5, page=page)
+    return render_template("index.html", pagination=posts, p=page)
 
 
 @app.route("/create", methods=["GET", "POST"])
 def create():
     if "user_id" not in session:
         return redirect(url_for("login"))
+    exists = User.query.with_entities(Riddle.id).filter_by(id=session["user_id"]).first()
+    if not exists:
+        session.pop("user_id", None)
+        return redirect(url_for("login"))
+        
     if request.method == "GET":
         return render_template("create.html")
 
@@ -70,6 +92,7 @@ def create():
             if len(answers[i]) > 250:
                 return render_template("create.html", message="The maximum answer length should be 250 characters.")
         except:
+            print("write answer")
             return render_template("create.html", message="An error has occured.")
     correct = request.form.get("correct")
     if not correct:

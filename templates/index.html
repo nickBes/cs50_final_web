@@ -1,9 +1,59 @@
 {% extends 'layout.html' %}
 
+{% block style %}
+    <style>
+        .link:hover{
+            border-bottom: 1px solid black;
+            border-radius: 0%;
+        }
+        .link{
+            border-radius: 0%;
+        }
+    </style>
+{% endblock %}
+
+
 {% block title %}
     Riddles
 {% endblock %}
 
 {% block body %}
-    <h1>This is the main page</h1>
+    <div class="container shadow-sm bg-light p-5">
+        {% if message %}
+            <div class="alert alert-danger mt-3" role="alert">
+                {{ message }}
+            </div>      
+        {% endif %}
+        <h1 class="mb-5">Newest Riddles/Questions:</h1>
+        <div class="container mb-5">
+            {% if pagination %}
+            {% for riddle in pagination.items %}
+            
+                <div class="row align-items-center border m-2">
+                    <div class="col-10 p-2">
+                        <a class="btn link" href="{{url_for('question', riddle_id=riddle.id)}}">{{riddle.title}}</a>
+                    </div>
+                    <div class="col-2 p-2 text-right">
+                        <em class="d-flex flex-row-reverse m-2">{{riddle.author.username}}</em>
+                    </div>
+                </div>
+            {% endfor %}
+            {% endif %}
+        </div>
+        <div class="container d-flex justify-content-center">
+            <nav aria-label="Page navigation example">
+                <ul class="pagination text-body">
+                  {% for page in pagination.iter_pages(left_edge=0,right_edge=0, right_current=3) %}
+                    {% if page %}
+                        <li class="page-item{% if page == p %} active{% endif %}" 
+                        {% if page == p %}aria-current="page"{% endif %}><a class="page-link {% if page == p %}text-white{% else %}text-body{% endif %}" href="{{ url_for('page', page=page) }}">{{page}}</a></li>
+                    {% endif %}
+                    {% endfor %}
+                </ul>    
+            </nav>
+        </div>
+    </div>
+{% endblock %}
+{% block end %}
+
 {% endblock %}
