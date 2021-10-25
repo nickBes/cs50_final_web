@@ -5,7 +5,6 @@ from sqlalchemy import desc
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = b"\xf5Ey\xe9I \xb0\xc6\x80k\x83\xfbU!\xf4\xcal'!\t\x99\xc9\xea\xac\x1b\xafK.q\xef"
 app.config['PERMANENT_SESSION_LIFETIME'] =  timedelta(days=3)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///riddles.db"
